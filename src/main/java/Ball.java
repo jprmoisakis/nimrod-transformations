@@ -1,20 +1,17 @@
-public class Ball {
 
-    private long offsetCommitPeriodMs;
-    private int maxRetries;
-    private int maxUncommittedOffsets;
-    private  String firstPollOffsetStrategy;
-    private  String kafkaSpoutStreams;
-    private String tuplesBuilder;
-    private String retryService;
-    private String kafkaProps;
-    private String keyDeserializer;
-    private String valueDeserializer;
-    private String subscribedTopics;
-    private String  topicWildcardPattern;
-    private String  subscription;
-    private String  translator;
-    private String pollTimeoutMs;
+public class Ball {
+    private final long offsetCommitPeriodMs;
+    private final int maxRetries;
+    private final int maxUncommittedOffsets;
+    private final  String firstPollOffsetStrategy;
+    private final  String kafkaSpoutStreams;
+    private final String tuplesBuilder;
+    private final String retryService;
+    private final String kafkaProps;
+    private final String keyDeserializer;
+    private final String valueDeserializer;
+    private final String subscribedTopics;
+    private final String  topicWildcardPattern;
     private String finalString;
 
     public Ball(long offsetCommitPeriodMs, int maxRetries, int maxUncommittedOffsets, String firstPollOffsetStrategy, String kafkaSpoutStreams, String tuplesBuilder, String retryService, String kafkaProps, String keyDeserializer, String valueDeserializer, String subscribedTopics, String topicWildcardPattern) {
@@ -30,9 +27,6 @@ public class Ball {
         this.valueDeserializer = valueDeserializer;
         this.subscribedTopics = subscribedTopics;
         this.topicWildcardPattern = topicWildcardPattern;
-        this.subscription = "";
-        this.translator = "";
-        this.pollTimeoutMs = "";
         this.finalString = finalString();
     }
 
@@ -40,17 +34,8 @@ public class Ball {
         return finalString;
     }
 
-    public String getKeyDeserializer() {
-        return keyDeserializer;
-    }
-
-    public String getValueDeserializer() {
-        return valueDeserializer;
-    }
-
     public String getSubscribedTopics() {
         return subscribedTopics;
-
     }
 
     public String getTopicWildcardPattern() {
@@ -60,18 +45,20 @@ public class Ball {
     public String finalString() {
         String returnString = "KafkaSpoutConfig{" +
                 "kafkaProps=" + kafkaProps +
-                ", key=" + getKeyDeserializer() +
-                ", value=" + getValueDeserializer() +
-                ", pollTimeoutMs=" + pollTimeoutMs +
+                ", keyDeserializer=" + keyDeserializer +
+                ", valueDeserializer=" + valueDeserializer +
+                ", pollTimeoutMs=" + valueDeserializer +
                 ", offsetCommitPeriodMs=" + offsetCommitPeriodMs +
+                ", maxRetries=" + maxRetries +
                 ", maxUncommittedOffsets=" + maxUncommittedOffsets +
                 ", firstPollOffsetStrategy=" + firstPollOffsetStrategy +
-                ", subscription=" + subscription +
-                ", translator=" + translator +
+                ", kafkaSpoutStreams=" + kafkaSpoutStreams +
+                ", tuplesBuilder=" + tuplesBuilder +
                 ", retryService=" + retryService +
+                ", topics=" + getSubscribedTopics() +
+                ", topicWildcardPattern=" + getTopicWildcardPattern() +
                 '}';
         return returnString;
     }
 
 }
-

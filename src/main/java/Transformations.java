@@ -2,11 +2,16 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
+import com.sun.org.apache.xpath.internal.operations.Mod;
 import org.eclipse.jdt.core.dom.*;
 import org.eclipse.jdt.core.dom.rewrite.ASTRewrite;
+
+import static org.eclipse.jdt.core.dom.Modifier.*;
 
 
 public class Transformations {
@@ -15,6 +20,26 @@ public class Transformations {
     private static String className = "";
     private static AnonymousClassDeclaration classNode = null;
 
+    private static void removeModifiers(FieldDeclaration node){
+        //SimpleName name = node);
+        //this.names.add(name.getIdentifier());
+        //System.out.println(node.toString());
+
+        List<Modifier> modifiersToRemove = new ArrayList<Modifier>();
+
+        for(Modifier mod : (List<Modifier>) node.modifiers()){
+            if(mod.isFinal()|| mod.isProtected()){
+                modifiersToRemove.add(mod);
+            }
+        }
+
+        for(Modifier mod : modifiersToRemove){
+            node.modifiers().remove(mod);
+        }
+
+
+            System.out.println(node.modifiers());
+    }
     // parse string
     public static void parse(String str) {
         ASTParser parser = ASTParser.newParser(AST.JLS8);
@@ -24,18 +49,20 @@ public class Transformations {
         cu.accept(new ASTVisitor() {
             Set names = new HashSet();
 
-            public boolean visit(VariableDeclarationFragment node) {
-                SimpleName name = node.getName();
-                this.names.add(name.getIdentifier());
+            public boolean visit(FieldDeclaration node) {
+
+                removeModifiers(node);
+
                 //System.out.println("Declaration of '" + name + "' at line"
                 //        + cu.getLineNumber(name.getStartPosition()));
-                return false; // do not continue
+                return true; // do not continue
             }
+
 
             public boolean visit(SimpleName node) {
                 if (this.names.contains(node.getIdentifier())) {
                     //System.out.println("Usage of '" + node + "' at line "
-                          //  + cu.getLineNumber(node.getStartPosition()));
+                      //      + cu.getLineNumber(node.getStartPosition()));
                 }
                 return true;
             }
@@ -45,7 +72,7 @@ public class Transformations {
                         hasEmptyConstructor = true;
                     }
                     className = node.getName().toString();
-                    System.out.println(className);
+                    //System.out.println(className);
 
                 }
                 return true;
@@ -98,15 +125,16 @@ public class Transformations {
         newConstructor.setName(ast.newSimpleName(className));
         newConstructor.setConstructor(true);
         newConstructor.setBody(ast.newBlock());
-        Modifier.ModifierKeyword amp = Modifier.ModifierKeyword.PUBLIC_KEYWORD;
+        ModifierKeyword amp = ModifierKeyword.PUBLIC_KEYWORD;
         newConstructor.modifiers().add(ast.newModifier(amp));
-
         TypeDeclaration typeDeclaration = ( TypeDeclaration )cu.types().get( 0 );
         typeDeclaration.bodyDeclarations().add(newConstructor);
 
-        System.out.println(typeDeclaration.toString());
+        //System.out.println(typeDeclaration.toString());
 
     }
+
+
 
     public static void main(String[] args) throws IOException {
 
