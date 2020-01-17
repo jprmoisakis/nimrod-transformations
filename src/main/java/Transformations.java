@@ -7,7 +7,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-import com.sun.org.apache.xpath.internal.operations.Mod;
 import org.eclipse.jdt.core.dom.*;
 import org.eclipse.jdt.core.dom.rewrite.ASTRewrite;
 
@@ -21,27 +20,6 @@ public class Transformations {
     private static AnonymousClassDeclaration classNode = null;
 
 
-
-    private static void removeModifiers(FieldDeclaration node){
-        //SimpleName name = node);
-        //this.names.add(name.getIdentifier());
-        //System.out.println(node.toString());
-
-        List<Modifier> modifiersToRemove = new ArrayList<Modifier>();
-
-        for(Modifier mod : (List<Modifier>) node.modifiers()){
-            if(mod.isFinal()|| mod.isProtected()){
-                modifiersToRemove.add(mod);
-            }
-        }
-
-        for(Modifier mod : modifiersToRemove){
-            node.modifiers().remove(mod);
-        }
-
-
-            System.out.println(node.modifiers());
-    }
     // parse string
     public static void parse(String str, ASTParser parser,CompilationUnit cu) {
         //ASTParser parser = ASTParser.newParser(AST.JLS8);
@@ -53,7 +31,7 @@ public class Transformations {
 
             public boolean visit(FieldDeclaration node) {
 
-                removeModifiers(node);
+                removeModifiersFields(node);
 
                 //System.out.println("Declaration of '" + name + "' at line"
                 //        + cu.getLineNumber(name.getStartPosition()));
@@ -75,8 +53,8 @@ public class Transformations {
                     }
                     className = node.getName().toString();
                     //System.out.println(className);
-
                 }
+                removeModifiersMethods(node);
                 return true;
             }
 
@@ -134,6 +112,42 @@ public class Transformations {
 
         System.out.println(typeDeclaration.toString());
 
+    }
+
+    private static void removeModifiersFields(FieldDeclaration node){
+        //SimpleName name = node);
+        //this.names.add(name.getIdentifier());
+        //System.out.println(node.toString());
+        List<Modifier> modifiersToRemove = new ArrayList<Modifier>();
+        for(Modifier mod : (List<Modifier>) node.modifiers()){
+            if(mod.isFinal()|| mod.isProtected()){
+                modifiersToRemove.add(mod);
+            }
+        }
+        for(Modifier mod : modifiersToRemove){
+            node.modifiers().remove(mod);
+        }
+        System.out.println(node.modifiers());
+    }
+    //TODO remove duplicated code
+    private static void removeModifiersMethods(MethodDeclaration node){
+        //SimpleName name = node);
+        //this.names.add(name.getIdentifier());
+        //System.out.println(node.toString());
+        List<Modifier> modifiersToRemove = new ArrayList<Modifier>();
+
+
+        for(Modifier mod : (List<Modifier>) node.modifiers()){
+            if(mod.isFinal()|| mod.isProtected() ){
+                modifiersToRemove.add(mod);
+            }else if (mod.isPrivate()){
+                mod.setKeyword(ModifierKeyword.PUBLIC_KEYWORD);
+            }
+        }
+        for(Modifier mod : modifiersToRemove){
+            node.modifiers().remove(mod);
+        }
+        System.out.println(node.modifiers());
     }
 
     public static void main(String[] args) throws IOException {

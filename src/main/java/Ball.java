@@ -30,15 +30,15 @@ public class Ball {
         this.finalString = finalString();
     }
 
-    public String getFinalString() {
+    private String getFinalString() {
         return finalString;
     }
 
-    public String getSubscribedTopics() {
+    private String getSubscribedTopics() {
         return subscribedTopics;
     }
 
-    public String getTopicWildcardPattern() {
+    private  final String getTopicWildcardPattern() {
         return topicWildcardPattern;
     }
 
