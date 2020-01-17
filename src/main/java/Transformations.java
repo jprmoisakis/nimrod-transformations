@@ -127,7 +127,7 @@ public class Transformations {
         for(Modifier mod : modifiersToRemove){
             node.modifiers().remove(mod);
         }
-        System.out.println(node.modifiers());
+        //System.out.println(node.modifiers());
     }
     //TODO remove duplicated code
     private static void removeModifiersMethods(MethodDeclaration node){
@@ -147,7 +147,7 @@ public class Transformations {
         for(Modifier mod : modifiersToRemove){
             node.modifiers().remove(mod);
         }
-        System.out.println(node.modifiers());
+        //System.out.println(node.modifiers());
     }
 
     public static void main(String[] args) throws IOException {
