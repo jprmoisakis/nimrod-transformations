@@ -20,6 +20,8 @@ public class Transformations {
     private static String className = "";
     private static AnonymousClassDeclaration classNode = null;
 
+
+
     private static void removeModifiers(FieldDeclaration node){
         //SimpleName name = node);
         //this.names.add(name.getIdentifier());
@@ -41,11 +43,11 @@ public class Transformations {
             System.out.println(node.modifiers());
     }
     // parse string
-    public static void parse(String str) {
-        ASTParser parser = ASTParser.newParser(AST.JLS8);
-        parser.setSource(str.toCharArray());
-        parser.setKind(ASTParser.K_COMPILATION_UNIT);
-        final CompilationUnit cu = (CompilationUnit) parser.createAST(null);
+    public static void parse(String str, ASTParser parser,CompilationUnit cu) {
+        //ASTParser parser = ASTParser.newParser(AST.JLS8);
+        //parser.setSource(str.toCharArray());
+        //parser.setKind(ASTParser.K_COMPILATION_UNIT);
+        //final CompilationUnit cu = (CompilationUnit) parser.createAST(null);
         cu.accept(new ASTVisitor() {
             Set names = new HashSet();
 
@@ -106,16 +108,16 @@ public class Transformations {
             filePath = f.getAbsolutePath();
             //System.out.println(f);
             if(f.isFile()){
-                parse(readFileToString(filePath));
+                //parse(readFileToString(filePath));
             }
         }
     }
 
-    private static void addEmptyConstructor(String str){
-        ASTParser parser = ASTParser.newParser(AST.JLS8);
-        parser.setSource(str.toCharArray());
-        parser.setKind(ASTParser.K_COMPILATION_UNIT);
-        final CompilationUnit cu = (CompilationUnit) parser.createAST(null);
+    private static void addEmptyConstructor(String str, ASTParser parser, CompilationUnit cu){
+        //ASTParser parser = ASTParser.newParser(AST.JLS8);
+        //parser.setSource(str.toCharArray());
+        //parser.setKind(ASTParser.K_COMPILATION_UNIT);
+        //final CompilationUnit cu = (CompilationUnit) parser.createAST(null);
 
         AST ast = cu.getAST();
         ASTRewrite rewriter = ASTRewrite.create(ast);
@@ -130,17 +132,22 @@ public class Transformations {
         TypeDeclaration typeDeclaration = ( TypeDeclaration )cu.types().get( 0 );
         typeDeclaration.bodyDeclarations().add(newConstructor);
 
-        //System.out.println(typeDeclaration.toString());
+        System.out.println(typeDeclaration.toString());
 
     }
 
-
-
     public static void main(String[] args) throws IOException {
 
-        parse(readFileToString("/home/jprm/Documents/test/src/main/java/Ball.java"));
+
+        ASTParser parser = ASTParser.newParser(AST.JLS8);
+        String str = readFileToString("/home/jprm/Documents/test/src/main/java/Ball.java");
+        parser.setSource(str.toCharArray());
+        parser.setKind(ASTParser.K_COMPILATION_UNIT);
+        final CompilationUnit cu = (CompilationUnit) parser.createAST(null);
+
+        parse(readFileToString("/home/jprm/Documents/test/src/main/java/Ball.java"),parser, cu);
         if(!hasEmptyConstructor) {
-            addEmptyConstructor(readFileToString("/home/jprm/Documents/test/src/main/java/Ball.java"));
+            addEmptyConstructor(readFileToString("/home/jprm/Documents/test/src/main/java/Ball.java"),parser,cu);
         }
     }
 }
