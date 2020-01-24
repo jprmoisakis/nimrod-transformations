@@ -42,6 +42,10 @@ public class Ball {
         return topicWildcardPattern;
     }
 
+    static String teste(){
+        return "a";
+    }
+
     public String finalString() {
         String returnString = "KafkaSpoutConfig{" +
                 "kafkaProps=" + kafkaProps +

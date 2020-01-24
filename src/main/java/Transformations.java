@@ -21,7 +21,7 @@ public class Transformations {
 
 
     // parse string
-    public static void parse(String str, ASTParser parser,CompilationUnit cu) {
+    public static void parse(String str, final ASTParser parser, final CompilationUnit cu) {
         //ASTParser parser = ASTParser.newParser(AST.JLS8);
         //parser.setSource(str.toCharArray());
         //parser.setKind(ASTParser.K_COMPILATION_UNIT);
@@ -54,7 +54,7 @@ public class Transformations {
                     className = node.getName().toString();
                     //System.out.println(className);
                 }
-                removeModifiersMethods(node);
+                removeModifiersMethods(node,cu);
                 return true;
             }
 
@@ -130,24 +130,32 @@ public class Transformations {
         //System.out.println(node.modifiers());
     }
     //TODO remove duplicated code
-    private static void removeModifiersMethods(MethodDeclaration node){
+    private static void removeModifiersMethods(MethodDeclaration node, CompilationUnit cu){
         //SimpleName name = node);
         //this.names.add(name.getIdentifier());
         //System.out.println(node.toString());
+        AST ast = cu.getAST();
         List<Modifier> modifiersToRemove = new ArrayList<Modifier>();
 
-
         for(Modifier mod : (List<Modifier>) node.modifiers()){
+            System.out.println(mod.toString());
             if(mod.isFinal()|| mod.isProtected() ){
                 modifiersToRemove.add(mod);
-            }else if (mod.isPrivate()){
+            }else if (mod.isPrivate()) {
                 mod.setKeyword(ModifierKeyword.PUBLIC_KEYWORD);
             }
         }
+
+
         for(Modifier mod : modifiersToRemove){
             node.modifiers().remove(mod);
         }
         //System.out.println(node.modifiers());
+        Modifier a = (Modifier)node.modifiers().get(0);
+
+        if(!a.isPublic()){
+            node.modifiers().add(0,ast.newModifier(ModifierKeyword.PUBLIC_KEYWORD));
+        }
     }
 
     public static void main(String[] args) throws IOException {
