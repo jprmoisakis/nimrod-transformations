@@ -21,7 +21,7 @@ public class Transformations {
 
 
     // parse string
-    public static void parse(String str, final ASTParser parser, final CompilationUnit cu) {
+    public static void parse(String str, final ASTParser parser, final CompilationUnit cu, final String modifiedMethod) {
         //ASTParser parser = ASTParser.newParser(AST.JLS8);
         //parser.setSource(str.toCharArray());
         //parser.setKind(ASTParser.K_COMPILATION_UNIT);
@@ -46,15 +46,16 @@ public class Transformations {
                 }
                 return true;
             }
-            public boolean visit(MethodDeclaration node){
+            public boolean visit(MethodDeclaration node) {
                 if(node.isConstructor()){
                     if(node.parameters().isEmpty()){
                         hasEmptyConstructor = true;
                     }
                     className = node.getName().toString();
-                    //System.out.println(className);
                 }
-                removeModifiersMethods(node,cu);
+                if (node.getName().toString().equals(modifiedMethod)){
+                    removeModifiersMethods(node, cu);
+                }
                 return true;
             }
 
@@ -137,13 +138,18 @@ public class Transformations {
         AST ast = cu.getAST();
         List<Modifier> modifiersToRemove = new ArrayList<Modifier>();
 
-        for(Modifier mod : (List<Modifier>) node.modifiers()){
-            System.out.println(mod.toString());
-            if(mod.isFinal()|| mod.isProtected() ){
-                modifiersToRemove.add(mod);
-            }else if (mod.isPrivate()) {
-                mod.setKeyword(ModifierKeyword.PUBLIC_KEYWORD);
+        int i = 0;
+
+        while(i < node.modifiers().size()){
+            if (node.modifiers().get(i) instanceof Modifier){
+                Modifier mod = (Modifier) node.modifiers().get(i);
+                if(mod.isFinal()|| mod.isProtected() ){
+                    modifiersToRemove.add(mod);
+                }else if (mod.isPrivate()){
+                    mod.setKeyword(ModifierKeyword.PUBLIC_KEYWORD);
+                }
             }
+            i++;
         }
 
 
@@ -151,26 +157,30 @@ public class Transformations {
             node.modifiers().remove(mod);
         }
         //System.out.println(node.modifiers());
-        Modifier a = (Modifier)node.modifiers().get(0);
+        if (node.modifiers().get(0) instanceof Modifier) {
+            Modifier a = (Modifier) node.modifiers().get(0);
 
-        if(!a.isPublic()){
-            node.modifiers().add(0,ast.newModifier(ModifierKeyword.PUBLIC_KEYWORD));
+            if (!a.isPublic()) {
+                node.modifiers().add(0, ast.newModifier(ModifierKeyword.PUBLIC_KEYWORD));
+            }
         }
     }
 
-    public static void main(String[] args) throws IOException {
-
-
+    static final void runTransformation(String file, String modifiedMethod) throws IOException {
         ASTParser parser = ASTParser.newParser(AST.JLS8);
-        String str = readFileToString("/home/jprm/Documents/test/src/main/java/Ball.java");
+        String str = readFileToString(file);
         parser.setSource(str.toCharArray());
         parser.setKind(ASTParser.K_COMPILATION_UNIT);
         final CompilationUnit cu = (CompilationUnit) parser.createAST(null);
 
-        parse(readFileToString("/home/jprm/Documents/test/src/main/java/Ball.java"),parser, cu);
+        parse(readFileToString(file),parser, cu, modifiedMethod);
         if(!hasEmptyConstructor) {
-            addEmptyConstructor(readFileToString("/home/jprm/Documents/test/src/main/java/Ball.java"),parser,cu);
+            addEmptyConstructor(readFileToString(file),parser,cu);
         }
+    }
+
+    public static void main(String[] args) throws IOException {
+        Transformations.runTransformation("/home/leusonmario/Documentos/PHD/Research/projects/myMinning/miningframework/clonedRepositories/jsoup/src/main/java/org/jsoup/helper/DataUtil.java", "execute");
     }
 }
 
