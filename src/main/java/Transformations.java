@@ -1,14 +1,13 @@
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileReader;
-import java.io.IOException;
+import java.io.*;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+import org.apache.commons.io.FileUtils;
 import org.eclipse.jdt.core.dom.*;
 import org.eclipse.jdt.core.dom.rewrite.ASTRewrite;
+import org.eclipse.text.edits.TextEdit;
 
 import static org.eclipse.jdt.core.dom.Modifier.*;
 
@@ -21,7 +20,7 @@ public class Transformations {
 
 
     // parse string
-    public static void parse(String str, final ASTParser parser, final CompilationUnit cu, final String modifiedMethod) {
+    public static void parse(String str, final ASTParser parser, final CompilationUnit cu) {
         //ASTParser parser = ASTParser.newParser(AST.JLS8);
         //parser.setSource(str.toCharArray());
         //parser.setKind(ASTParser.K_COMPILATION_UNIT);
@@ -53,9 +52,8 @@ public class Transformations {
                     }
                     className = node.getName().toString();
                 }
-                if (node.getName().toString().equals(modifiedMethod)){
-                    removeModifiersMethods(node, cu);
-                }
+                removeModifiersMethods(node, cu);
+
                 return true;
             }
 
@@ -99,7 +97,7 @@ public class Transformations {
         //final CompilationUnit cu = (CompilationUnit) parser.createAST(null);
 
         AST ast = cu.getAST();
-        ASTRewrite rewriter = ASTRewrite.create(ast);
+        //ASTRewrite rewriter = ASTRewrite.create(ast);
 
         MethodDeclaration newConstructor = ast.newMethodDeclaration();
 
@@ -111,7 +109,7 @@ public class Transformations {
         TypeDeclaration typeDeclaration = ( TypeDeclaration )cu.types().get( 0 );
         typeDeclaration.bodyDeclarations().add(newConstructor);
 
-        System.out.println(typeDeclaration.toString());
+        //System.out.println(typeDeclaration.toString());
 
     }
 
@@ -166,21 +164,33 @@ public class Transformations {
         }
     }
 
-    static final void runTransformation(String file, String modifiedMethod) throws IOException {
+    static final void runTransformation(File file) throws IOException {
+        final String str = FileUtils.readFileToString(file);
+        org.eclipse.jface.text.Document document = new org.eclipse.jface.text.Document(str);
         ASTParser parser = ASTParser.newParser(AST.JLS8);
-        String str = readFileToString(file);
-        parser.setSource(str.toCharArray());
+        parser.setSource(document.get().toCharArray());
         parser.setKind(ASTParser.K_COMPILATION_UNIT);
+
+        //String str = readFileToString(file);
+
         final CompilationUnit cu = (CompilationUnit) parser.createAST(null);
 
-        parse(readFileToString(file),parser, cu, modifiedMethod);
+
+        parse(str,parser, cu);
         if(!hasEmptyConstructor) {
-            addEmptyConstructor(readFileToString(file),parser,cu);
+            addEmptyConstructor(str,parser,cu);
         }
+
+        FileWriter fooWriter = new FileWriter(file, false); // true to append
+        fooWriter.write(cu.toString());
+        fooWriter.close();
+
     }
 
     public static void main(String[] args) throws IOException {
-        Transformations.runTransformation("/home/leusonmario/Documentos/PHD/Research/projects/myMinning/miningframework/clonedRepositories/jsoup/src/main/java/org/jsoup/helper/DataUtil.java", "execute");
+        File file = new File("/home/jprm/Documents/test/src/main/java/Ball.java");
+        Transformations.runTransformation(file);
+        //Transformations.runTransformation("/home/leusonmario/Documentos/PHD/Research/projects/myMinning/miningframework/clonedRepositories/jsoup/src/main/java/org/jsoup/helper/DataUtil.java", "execute");
     }
 }
 
