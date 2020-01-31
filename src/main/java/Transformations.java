@@ -1,10 +1,8 @@
 import java.io.*;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 import org.apache.commons.io.FileUtils;
+import org.eclipse.jdt.core.JavaCore;
 import org.eclipse.jdt.core.dom.*;
 import org.eclipse.jdt.core.dom.rewrite.ASTRewrite;
 import org.eclipse.text.edits.TextEdit;
@@ -29,6 +27,7 @@ public class Transformations {
             Set names = new HashSet();
 
             public boolean visit(FieldDeclaration node) {
+                System.out.println(node);
 
                 removeModifiersFields(node);
 
@@ -37,14 +36,6 @@ public class Transformations {
                 return true; // do not continue
             }
 
-
-            public boolean visit(SimpleName node) {
-                if (this.names.contains(node.getIdentifier())) {
-                    //System.out.println("Usage of '" + node + "' at line "
-                      //      + cu.getLineNumber(node.getStartPosition()));
-                }
-                return true;
-            }
             public boolean visit(MethodDeclaration node) {
                 if(node.isConstructor()){
                     if(node.parameters().isEmpty()){
@@ -52,6 +43,7 @@ public class Transformations {
                     }
                     className = node.getName().toString();
                 }
+                //System.out.println(node);
                 removeModifiersMethods(node, cu);
 
                 return true;
@@ -155,19 +147,29 @@ public class Transformations {
             node.modifiers().remove(mod);
         }
         //System.out.println(node.modifiers());
-        if (node.modifiers().get(0) instanceof Modifier) {
-            Modifier a = (Modifier) node.modifiers().get(0);
+        System.out.println(node.modifiers());
+        if(node.modifiers().size() > 0) {
+            if (node.modifiers().get(0) instanceof Modifier) {
+                Modifier a = (Modifier) node.modifiers().get(0);
 
-            if (!a.isPublic()) {
-                node.modifiers().add(0, ast.newModifier(ModifierKeyword.PUBLIC_KEYWORD));
+                if (!a.isPublic()) {
+                    node.modifiers().add(0, ast.newModifier(ModifierKeyword.PUBLIC_KEYWORD));
+                }
             }
+        }else{
+            node.modifiers().add(0, ast.newModifier(ModifierKeyword.PUBLIC_KEYWORD));
         }
     }
 
     static final void runTransformation(File file) throws IOException {
         final String str = FileUtils.readFileToString(file);
         org.eclipse.jface.text.Document document = new org.eclipse.jface.text.Document(str);
+
         ASTParser parser = ASTParser.newParser(AST.JLS8);
+        Map options = JavaCore.getOptions(); // New!
+        JavaCore.setComplianceOptions(JavaCore.VERSION_1_8, options); // New!
+        parser.setCompilerOptions(options);
+
         parser.setSource(document.get().toCharArray());
         parser.setKind(ASTParser.K_COMPILATION_UNIT);
 
@@ -188,10 +190,15 @@ public class Transformations {
     }
 
     public static void main(String[] args) throws IOException {
-        File file = new File("/home/jprm/Documents/test/src/main/java/Ball.java");
+        //String path = args[0];
+        //System.out.println(path);
+        File file = new File("/home/jprm/Documents/test/src/main/JsonWriter.java");
+        //File file = new File(path);
         Transformations.runTransformation(file);
-        //Transformations.runTransformation("/home/leusonmario/Documentos/PHD/Research/projects/myMinning/miningframework/clonedRepositories/jsoup/src/main/java/org/jsoup/helper/DataUtil.java", "execute");
     }
 }
 
+//mvn exec:java -Dexec.mainClass="com.vineetmanohar.module.Main"
+//mvn exec:java -Dexec.mainClass="com.vineetmanohar.module.Main" -Dexec.args="arg0 arg1 arg2"
+//mvn exec:java -Dexec.mainClass="com.vineetmanohar.module.Main" -Dexec.classpathScope=runtime
 
