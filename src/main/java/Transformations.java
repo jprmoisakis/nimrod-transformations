@@ -34,7 +34,7 @@ public class Transformations {
         return hasEmptyConstructor[0];
     }
     // parse string
-    public static void parse(String str, final ASTParser parser, final CompilationUnit cu) {
+    public static void parse(final CompilationUnit cu) {
         //ASTParser parser = ASTParser.newParser(AST.JLS8);
         //parser.setSource(str.toCharArray());
         //parser.setKind(ASTParser.K_COMPILATION_UNIT);
@@ -43,23 +43,14 @@ public class Transformations {
             Set names = new HashSet();
 
             public boolean visit(FieldDeclaration node) {
-                System.out.println(node);
 
                 removeModifiersFields(node);
 
-                //System.out.println("Declaration of '" + name + "' at line"
-                //        + cu.getLineNumber(name.getStartPosition()));
                 return true; // do not continue
             }
 
             public boolean visit(MethodDeclaration node) {
-                if(node.isConstructor()){
-                    if(node.parameters().isEmpty()){
-                        //hasEmptyConstructor = true;
-                    }
-                    //className = node.getName().toString();
-                }
-                //System.out.println(node);
+
                 removeModifiersMethods(node, cu);
 
                 return true;
@@ -68,7 +59,6 @@ public class Transformations {
                 addEmptyConstructor(node);
                 return true;
             }
-
 
 
         });
@@ -168,7 +158,7 @@ public class Transformations {
             node.modifiers().remove(mod);
         }
         //System.out.println(node.modifiers());
-        System.out.println(node.modifiers());
+        //System.out.println(node.modifiers());
         if(node.modifiers().size() > 0) {
             if (node.modifiers().get(0) instanceof Modifier) {
                 Modifier a = (Modifier) node.modifiers().get(0);
@@ -199,7 +189,7 @@ public class Transformations {
         final CompilationUnit cu = (CompilationUnit) parser.createAST(null);
 
 
-        parse(str,parser, cu);
+        parse(cu);
 
         FileWriter fooWriter = new FileWriter(file, false); // true to append
         fooWriter.write(cu.toString());
@@ -208,10 +198,10 @@ public class Transformations {
     }
 
     public static void main(String[] args) throws IOException {
-        String path = args[0];
+        //String path = args[0];
         //System.out.println(path);
-        //File file = new File("/home/jprm/Documents/test/src/main/HikariPool.java");
-        File file = new File(path);
+        File file = new File("/home/jprm/Documents/test/src/main/HikariPool.java");
+        //File file = new File(path);
         Transformations.runTransformation(file);
     }
 }
