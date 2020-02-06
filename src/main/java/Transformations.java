@@ -12,11 +12,27 @@ import static org.eclipse.jdt.core.dom.Modifier.*;
 
 public class Transformations {
 
-    private static boolean hasEmptyConstructor = false;
     private static String className = "";
     private static AnonymousClassDeclaration classNode = null;
+    private static List<String> emptyConctructors= new ArrayList();
+    //static boolean hasEmptyConstructor = false;
 
+    public static boolean parseEmptyConstructor(TypeDeclaration node){
+        final boolean[] hasEmptyConstructor = {false};
+        node.accept(new ASTVisitor() {
 
+            public boolean visit(MethodDeclaration node){
+                if(node.isConstructor()) {
+                    if (node.parameters().isEmpty()) {
+                        hasEmptyConstructor[0] = true;
+                    }
+                }
+                return true;
+            }
+
+        });
+        return hasEmptyConstructor[0];
+    }
     // parse string
     public static void parse(String str, final ASTParser parser, final CompilationUnit cu) {
         //ASTParser parser = ASTParser.newParser(AST.JLS8);
@@ -39,13 +55,17 @@ public class Transformations {
             public boolean visit(MethodDeclaration node) {
                 if(node.isConstructor()){
                     if(node.parameters().isEmpty()){
-                        hasEmptyConstructor = true;
+                        //hasEmptyConstructor = true;
                     }
-                    className = node.getName().toString();
+                    //className = node.getName().toString();
                 }
                 //System.out.println(node);
                 removeModifiersMethods(node, cu);
 
+                return true;
+            }
+            public boolean visit(TypeDeclaration node){
+                addEmptyConstructor(node);
                 return true;
             }
 
@@ -82,14 +102,16 @@ public class Transformations {
         }
     }
 
-    private static void addEmptyConstructor(String str, ASTParser parser, CompilationUnit cu){
-        //ASTParser parser = ASTParser.newParser(AST.JLS8);
-        //parser.setSource(str.toCharArray());
-        //parser.setKind(ASTParser.K_COMPILATION_UNIT);
-        //final CompilationUnit cu = (CompilationUnit) parser.createAST(null);
+    public static void addEmptyConstructor(TypeDeclaration node){
 
-        AST ast = cu.getAST();
+        if(parseEmptyConstructor(node)){
+            return;
+        }
+
+        AST ast = node.getAST();
         //ASTRewrite rewriter = ASTRewrite.create(ast);
+
+        String className = node.getName().getFullyQualifiedName();
 
         MethodDeclaration newConstructor = ast.newMethodDeclaration();
 
@@ -98,13 +120,12 @@ public class Transformations {
         newConstructor.setBody(ast.newBlock());
         ModifierKeyword amp = ModifierKeyword.PUBLIC_KEYWORD;
         newConstructor.modifiers().add(ast.newModifier(amp));
-        TypeDeclaration typeDeclaration = ( TypeDeclaration )cu.types().get( 0 );
-        typeDeclaration.bodyDeclarations().add(newConstructor);
 
-        //System.out.println(typeDeclaration.toString());
+        // typeDeclaration = ( TypeDeclaration )cu.types().get( 0 );
+
+        node.bodyDeclarations().add(newConstructor);
 
     }
-
     private static void removeModifiersFields(FieldDeclaration node){
         //SimpleName name = node);
         //this.names.add(name.getIdentifier());
@@ -179,9 +200,6 @@ public class Transformations {
 
 
         parse(str,parser, cu);
-        if(!hasEmptyConstructor) {
-            addEmptyConstructor(str,parser,cu);
-        }
 
         FileWriter fooWriter = new FileWriter(file, false); // true to append
         fooWriter.write(cu.toString());
@@ -190,10 +208,10 @@ public class Transformations {
     }
 
     public static void main(String[] args) throws IOException {
-        //String path = args[0];
+        String path = args[0];
         //System.out.println(path);
-        File file = new File("/home/jprm/Documents/test/src/main/JsonWriter.java");
-        //File file = new File(path);
+        //File file = new File("/home/jprm/Documents/test/src/main/HikariPool.java");
+        File file = new File(path);
         Transformations.runTransformation(file);
     }
 }
