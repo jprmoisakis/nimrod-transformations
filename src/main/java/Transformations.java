@@ -34,19 +34,14 @@ public class Transformations {
         return hasEmptyConstructor[0];
     }
     // parse string
-    public static void parse(final CompilationUnit cu) {
-        //ASTParser parser = ASTParser.newParser(AST.JLS8);
-        //parser.setSource(str.toCharArray());
-        //parser.setKind(ASTParser.K_COMPILATION_UNIT);
-        //final CompilationUnit cu = (CompilationUnit) parser.createAST(null);
+    public static void transform(final CompilationUnit cu) {
+
         cu.accept(new ASTVisitor() {
             Set names = new HashSet();
 
             public boolean visit(FieldDeclaration node) {
-
                 removeModifiersFields(node);
-
-                return true; // do not continue
+                return true;
             }
 
             public boolean visit(MethodDeclaration node) {
@@ -116,22 +111,60 @@ public class Transformations {
         node.bodyDeclarations().add(newConstructor);
 
     }
-    private static void removeModifiersFields(FieldDeclaration node){
-        //SimpleName name = node);
-        //this.names.add(name.getIdentifier());
-        //System.out.println(node.toString());
+    //Remove remove Final modifiers and set private and protected modifiers
+    private static void removeModifiersFields(FieldDeclaration node) {
+
         List<Modifier> modifiersToRemove = new ArrayList<Modifier>();
-        for(Modifier mod : (List<Modifier>) node.modifiers()){
-            if(mod.isFinal()|| mod.isProtected()){
-                modifiersToRemove.add(mod);
+
+        int i = 0;
+
+        while (i < node.modifiers().size()) {
+            if (node.modifiers().get(i) instanceof Modifier) {
+                Modifier mod = (Modifier) node.modifiers().get(i);
+                if (mod.isFinal()) {
+                    modifiersToRemove.add(mod);
+                } else if (mod.isPrivate() || mod.isProtected()) {
+                    mod.setKeyword(ModifierKeyword.PUBLIC_KEYWORD);
+                }
             }
+            i++;
         }
-        for(Modifier mod : modifiersToRemove){
+        for (Modifier mod : modifiersToRemove) {
             node.modifiers().remove(mod);
         }
-        //System.out.println(node.modifiers());
+        System.out.println(node);
+        if (node.modifiers().size() > 0) {
+
+
+            Object firstMod = node.modifiers().get(0);
+            //System.out.println(firstMod);
+
+            if (firstMod instanceof Annotation) {
+                if(!((Modifier) node.modifiers().get(1)).isPublic())
+                node.modifiers().add(1, node.getAST().newModifier(ModifierKeyword.PUBLIC_KEYWORD));
+
+            } else if (firstMod instanceof Modifier) {
+                if(!((Modifier) firstMod).isPublic()){
+                    node.modifiers().add(0, node.getAST().newModifier(ModifierKeyword.PUBLIC_KEYWORD));
+                }
+
+                //System.out.println("um " + node.modifiers().get(0));
+
+
+                //node.modifiers().add(0, node.getAST().newModifier(ModifierKeyword.PUBLIC_KEYWORD));
+            }
+        }
+
+
     }
-    //TODO remove duplicated code
+            //System.out.println(node.modifiers());
+
+            //node.modifiers().add(0, node.getAST().newModifier(ModifierKeyword.PUBLIC_KEYWORD));
+
+
+
+
+
     private static void removeModifiersMethods(MethodDeclaration node, CompilationUnit cu){
         //SimpleName name = node);
         //this.names.add(name.getIdentifier());
@@ -152,7 +185,6 @@ public class Transformations {
             }
             i++;
         }
-
 
         for(Modifier mod : modifiersToRemove){
             node.modifiers().remove(mod);
@@ -189,7 +221,7 @@ public class Transformations {
         final CompilationUnit cu = (CompilationUnit) parser.createAST(null);
 
 
-        parse(cu);
+        transform(cu);
 
         FileWriter fooWriter = new FileWriter(file, false); // true to append
         fooWriter.write(cu.toString());
@@ -200,7 +232,7 @@ public class Transformations {
     public static void main(String[] args) throws IOException {
         //String path = args[0];
         //System.out.println(path);
-        File file = new File("/home/jprm/Documents/test/src/main/HikariPool.java");
+        File file = new File("/home/jprm/Documents/test/src/main/ExplodedArchive.java");
         //File file = new File(path);
         Transformations.runTransformation(file);
     }
