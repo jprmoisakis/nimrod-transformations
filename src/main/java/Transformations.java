@@ -4,20 +4,16 @@ import java.util.*;
 import org.apache.commons.io.FileUtils;
 import org.eclipse.jdt.core.JavaCore;
 import org.eclipse.jdt.core.dom.*;
-import org.eclipse.jdt.core.dom.rewrite.ASTRewrite;
-import org.eclipse.text.edits.TextEdit;
+
 
 import static org.eclipse.jdt.core.dom.Modifier.*;
 
 
 public class Transformations {
 
-    private static String className = "";
-    private static AnonymousClassDeclaration classNode = null;
-    private static List<String> emptyConctructors= new ArrayList();
-    //static boolean hasEmptyConstructor = false;
 
-    public static boolean parseEmptyConstructor(TypeDeclaration node){
+    //todo if it doesnt have any constructor?
+    public static boolean hasEmptyConstructor(TypeDeclaration node){
         final boolean[] hasEmptyConstructor = {false};
         node.accept(new ASTVisitor() {
 
@@ -33,25 +29,22 @@ public class Transformations {
         });
         return hasEmptyConstructor[0];
     }
-    // parse string
+
     public static void transform(final CompilationUnit cu) {
 
         cu.accept(new ASTVisitor() {
-            Set names = new HashSet();
 
             public boolean visit(FieldDeclaration node) {
-                removeModifiersFields(node);
+                RemoveFinalModifierAndMakeFieldPublic(node);
                 return true;
             }
 
             public boolean visit(MethodDeclaration node) {
-
-                removeModifiersMethods(node, cu);
-
+                RemoveFinalModifierAndMakeMethodPublic(node);
                 return true;
             }
             public boolean visit(TypeDeclaration node){
-                addEmptyConstructor(node);
+                addEmptyConstructorAndMakeClassPublic(node);
                 return true;
             }
 
@@ -86,36 +79,44 @@ public class Transformations {
             }
         }
     }
+//add empty constructor
+    public static void addEmptyConstructorAndMakeClassPublic(TypeDeclaration node){
 
-    public static void addEmptyConstructor(TypeDeclaration node){
-
-        if(parseEmptyConstructor(node)){
-            return;
+        int i = 0;
+        while (i < node.modifiers().size()) {
+            if (node.modifiers().get(i) instanceof Modifier) {
+                Modifier mod = (Modifier) node.modifiers().get(i);
+                if (mod.isPrivate() || mod.isProtected()) {
+                    mod.setKeyword(ModifierKeyword.PUBLIC_KEYWORD);
+                }
+            }
+            i++;
         }
 
-        AST ast = node.getAST();
-        //ASTRewrite rewriter = ASTRewrite.create(ast);
+        if(!node.isInterface()){
+            if(hasEmptyConstructor(node)){
+                return;
+            }
 
-        String className = node.getName().getFullyQualifiedName();
+            AST ast = node.getAST();
+            String className = node.getName().getFullyQualifiedName();
+            MethodDeclaration newConstructor = ast.newMethodDeclaration();
 
-        MethodDeclaration newConstructor = ast.newMethodDeclaration();
+            newConstructor.setName(ast.newSimpleName(className));
+            newConstructor.setConstructor(true);
+            newConstructor.setBody(ast.newBlock());
+            ModifierKeyword amp = ModifierKeyword.PUBLIC_KEYWORD;
+            newConstructor.modifiers().add(ast.newModifier(amp));
 
-        newConstructor.setName(ast.newSimpleName(className));
-        newConstructor.setConstructor(true);
-        newConstructor.setBody(ast.newBlock());
-        ModifierKeyword amp = ModifierKeyword.PUBLIC_KEYWORD;
-        newConstructor.modifiers().add(ast.newModifier(amp));
+            node.bodyDeclarations().add(newConstructor);
+        }
 
-        // typeDeclaration = ( TypeDeclaration )cu.types().get( 0 );
-
-        node.bodyDeclarations().add(newConstructor);
 
     }
+
     //Remove remove Final modifiers and set private and protected modifiers
-    private static void removeModifiersFields(FieldDeclaration node) {
-
+    private static void RemoveFinalModifierAndMakeFieldPublic(FieldDeclaration node) {
         List<Modifier> modifiersToRemove = new ArrayList<Modifier>();
-
         int i = 0;
 
         while (i < node.modifiers().size()) {
@@ -132,75 +133,58 @@ public class Transformations {
         for (Modifier mod : modifiersToRemove) {
             node.modifiers().remove(mod);
         }
-        System.out.println(node);
-        if (node.modifiers().size() > 0) {
 
+        if (node.modifiers().size() > 0 && !node.toString().contains("public ")) {
 
             Object firstMod = node.modifiers().get(0);
-            //System.out.println(firstMod);
-
             if (firstMod instanceof Annotation) {
-                if(!((Modifier) node.modifiers().get(1)).isPublic())
-                node.modifiers().add(1, node.getAST().newModifier(ModifierKeyword.PUBLIC_KEYWORD));
+                if(!((Modifier) node.modifiers().get(1)).isPublic()){
+                    node.modifiers().add(1, node.getAST().newModifier(ModifierKeyword.PUBLIC_KEYWORD));
+                }
 
             } else if (firstMod instanceof Modifier) {
                 if(!((Modifier) firstMod).isPublic()){
                     node.modifiers().add(0, node.getAST().newModifier(ModifierKeyword.PUBLIC_KEYWORD));
                 }
-
-                //System.out.println("um " + node.modifiers().get(0));
-
-
-                //node.modifiers().add(0, node.getAST().newModifier(ModifierKeyword.PUBLIC_KEYWORD));
             }
         }
 
 
     }
-            //System.out.println(node.modifiers());
 
-            //node.modifiers().add(0, node.getAST().newModifier(ModifierKeyword.PUBLIC_KEYWORD));
+    private static void RemoveFinalModifierAndMakeMethodPublic(MethodDeclaration node){
 
-
-
-
-
-    private static void removeModifiersMethods(MethodDeclaration node, CompilationUnit cu){
-        //SimpleName name = node);
-        //this.names.add(name.getIdentifier());
-        //System.out.println(node.toString());
-        AST ast = cu.getAST();
         List<Modifier> modifiersToRemove = new ArrayList<Modifier>();
-
         int i = 0;
 
-        while(i < node.modifiers().size()){
-            if (node.modifiers().get(i) instanceof Modifier){
+        while (i < node.modifiers().size()) {
+            if (node.modifiers().get(i) instanceof Modifier) {
                 Modifier mod = (Modifier) node.modifiers().get(i);
-                if(mod.isFinal()|| mod.isProtected() ){
+                if (mod.isFinal()) {
                     modifiersToRemove.add(mod);
-                }else if (mod.isPrivate()){
+                } else if (mod.isPrivate() || mod.isProtected()) {
                     mod.setKeyword(ModifierKeyword.PUBLIC_KEYWORD);
                 }
             }
             i++;
         }
-
-        for(Modifier mod : modifiersToRemove){
+        for (Modifier mod : modifiersToRemove) {
             node.modifiers().remove(mod);
         }
-        //System.out.println(node.modifiers());
-        //System.out.println(node.modifiers());
-        if(node.modifiers().size() > 0) {
-            if (node.modifiers().get(0) instanceof Modifier) {
-                Modifier a = (Modifier) node.modifiers().get(0);
 
-                if (!a.isPublic()) {
-                    node.modifiers().add(0, ast.newModifier(ModifierKeyword.PUBLIC_KEYWORD));
+        if (node.modifiers().size() > 0 && !node.toString().contains("public ")) {
+
+            Object firstMod = node.modifiers().get(0);
+            if (firstMod instanceof Annotation) {
+                if(!((Modifier) node.modifiers().get(1)).isPublic()){
+                    node.modifiers().add(1, node.getAST().newModifier(ModifierKeyword.PUBLIC_KEYWORD));
+                }
+
+            } else if (firstMod instanceof Modifier) {
+                if(!((Modifier) firstMod).isPublic()){
+                    node.modifiers().add(0, node.getAST().newModifier(ModifierKeyword.PUBLIC_KEYWORD));
                 }
             }
-        }else{
-            node.modifiers().add(0, ast.newModifier(ModifierKeyword.PUBLIC_KEYWORD));
         }
     }
 
@@ -220,7 +204,6 @@ public class Transformations {
 
         final CompilationUnit cu = (CompilationUnit) parser.createAST(null);
 
-
         transform(cu);
 
         FileWriter fooWriter = new FileWriter(file, false); // true to append
@@ -230,10 +213,10 @@ public class Transformations {
     }
 
     public static void main(String[] args) throws IOException {
-        //String path = args[0];
+        String path = args[0];
         //System.out.println(path);
-        File file = new File("/home/jprm/Documents/test/src/main/ExplodedArchive.java");
-        //File file = new File(path);
+        //File file = new File("/home/jprm/Documents/test/src/main/ExplodedArchive.java");
+        File file = new File(path);
         Transformations.runTransformation(file);
     }
 }
