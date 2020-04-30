@@ -2,9 +2,14 @@ import java.io.*;
 import java.util.*;
 
 import org.apache.commons.io.FileUtils;
+import org.eclipse.core.runtime.CoreException;
+import org.eclipse.jdt.core.IField;
+import org.eclipse.jdt.core.IJavaElement;
 import org.eclipse.jdt.core.JavaCore;
+import org.eclipse.jdt.core.JavaModelException;
 import org.eclipse.jdt.core.dom.*;
-
+import org.eclipse.jdt.internal.corext.codemanipulation.*;
+import org.eclipse.jdt.internal.corext.util.JdtFlags;
 
 import static org.eclipse.jdt.core.dom.Modifier.*;
 
@@ -14,20 +19,14 @@ public class Transformations {
 
     //todo if it doesnt have any constructor?
     public static boolean hasEmptyConstructor(TypeDeclaration node){
-        final boolean[] hasEmptyConstructor = {false};
-        node.accept(new ASTVisitor() {
 
-            public boolean visit(MethodDeclaration node){
-                if(node.isConstructor()) {
-                    if (node.parameters().isEmpty()) {
-                        hasEmptyConstructor[0] = true;
-                    }
-                }
-                return true;
+        for(MethodDeclaration method : node.getMethods()){
+            if (method.isConstructor() && method.parameters().isEmpty()){
+               return true;
             }
+        }
 
-        });
-        return hasEmptyConstructor[0];
+        return false;
     }
 
     public static void transform(final CompilationUnit cu) {
@@ -36,6 +35,8 @@ public class Transformations {
 
             public boolean visit(FieldDeclaration node) {
                 RemoveFinalModifierAndMakeFieldPublic(node);
+                //addGettersAndSetters(node);
+                //addgetset(node);
                 return true;
             }
 
@@ -45,12 +46,196 @@ public class Transformations {
             }
             public boolean visit(TypeDeclaration node){
                 addEmptyConstructorAndMakeClassPublic(node);
+                addgettersSetters(node);
                 return true;
             }
 
 
         });
     }
+    private static Block createGetterMethodBody(AST ast, String variableName)
+    {
+        String body = "return this."+ variableName+";";
+        ASTParser parser = ASTParser.newParser(AST.JLS8);
+        parser.setKind(ASTParser.K_STATEMENTS);
+        parser.setSource(body.toCharArray());
+        ASTNode astNodeWithMethodBody = parser.createAST(null);
+        ASTNode convertedAstNodeWithMethodBody =
+                ASTNode.copySubtree(ast, astNodeWithMethodBody);
+        Block block = (Block)convertedAstNodeWithMethodBody;
+
+        return block;
+    }
+    private static Block createSetterMethodBody(AST ast, String variableName)
+    {
+        String body = "this."+ variableName+" = " + variableName + ";";
+        ASTParser parser = ASTParser.newParser(AST.JLS8);
+        parser.setKind(ASTParser.K_STATEMENTS);
+        parser.setSource(body.toCharArray());
+        ASTNode astNodeWithMethodBody = parser.createAST(null);
+        ASTNode convertedAstNodeWithMethodBody =
+                ASTNode.copySubtree(ast, astNodeWithMethodBody);
+        Block block = (Block)convertedAstNodeWithMethodBody;
+
+        return block;
+    }
+    public static void addgettersSetters(TypeDeclaration node){
+
+        List<String> variableNames = new ArrayList<String>();
+        List<Type> variableTypes = new ArrayList<Type>();
+
+        if(!node.isInterface()){
+            for(FieldDeclaration field: node.getFields()){
+
+                variableTypes.add(field.getType());
+
+                Object fragments = field.fragments().get(0);
+                if(fragments instanceof VariableDeclarationFragment){
+                    String variableName = ((VariableDeclarationFragment) fragments).getName().toString();
+                    variableNames.add(variableName);
+                    System.out.println(variableName);
+                }
+
+            }
+            ModifierKeyword publicMod = ModifierKeyword.PUBLIC_KEYWORD;
+            AST astNode = node.getAST();
+
+
+            //AST ast = node.getAST();
+            for(int i = 0 ; i< variableNames.size(); i++) {
+                Type type = variableTypes.get(i);
+
+
+                ASTNode converted = ASTNode.copySubtree(astNode,type);
+                Type tipo = (Type) converted;
+
+
+
+
+                MethodDeclaration getter = astNode.newMethodDeclaration();
+                getter.setName(astNode.newSimpleName("get"+ variableNames.get(i)));
+                getter.modifiers().add(astNode.newModifier(publicMod));
+                getter.setReturnType2(tipo);
+                Block getterBody = createGetterMethodBody(astNode, variableNames.get(i));
+                getter.setBody(getterBody);
+
+                node.bodyDeclarations().add(getter);
+
+
+                ASTNode converted2 = ASTNode.copySubtree(astNode,type);
+                Type tipo2 = (Type) converted2;
+
+                MethodDeclaration setter = astNode.newMethodDeclaration();
+                setter.setName(astNode.newSimpleName("set"+ variableNames.get(i)));
+                setter.modifiers().add(astNode.newModifier(publicMod));
+                setter.setReturnType2(astNode.newPrimitiveType(PrimitiveType.VOID));
+                SingleVariableDeclaration parameter = astNode.newSingleVariableDeclaration();
+                parameter.setType(tipo2);
+                parameter.setName(astNode.newSimpleName(variableNames.get(i)));
+                setter.parameters().add(parameter);
+                Block setterBody = createSetterMethodBody(astNode, variableNames.get(i));
+                setter.setBody(setterBody);
+
+                node.bodyDeclarations().add(setter);
+
+
+
+                //MethodDeclaration setter = astNode.newMethodDeclaration();
+                //setter.setName(astNode.newSimpleName("get"+ variableNames.get(i)));
+
+                //setter.setReturnType2(astNode.newPrimitiveType(PrimitiveType.VOID));
+                //setter.modifiers().add(astNode.newModifier(amp));
+                //setter.setReturnType2(tipo);
+
+                //SingleVariableDeclaration variableDeclaration = astNode.newSingleVariableDeclaration();
+                //Type b = variableTypes.get(i);
+                //Object c = variableTypes.get(i);
+
+
+                //variableDeclaration.setName(astNode.newSimpleName(variableNames.get(i)));
+                //boolean is = b.isParameterizedType();
+                //ast.newTypeLiteral().setType(b);
+                //astNode.newParameterizedType(b);
+                //variableDeclaration.setType(tipo);
+                //ast.newParameterizedType();
+                //b.getParent().
+                //setter.parameters().add(variableDeclaration);
+
+                //node.bodyDeclarations().add(setter);
+            }
+            /*
+            ModifierKeyword amp = ModifierKeyword.PUBLIC_KEYWORD;
+            AST ast = node.getAST();
+            for(int i = 0 ; i< variableNames.size(); i++){
+                MethodDeclaration getter = ast.newMethodDeclaration();
+                getter.setName(ast.newSimpleName(variableNames.get(i)));
+
+                getter.setReturnType2(null);
+                //getter.setReturnType2(variableTypes.get(i));
+                getter.modifiers().add(ast.newModifier(amp));
+                node.bodyDeclarations().add(getter);
+
+            }
+            */
+
+
+
+
+
+
+
+
+        }
+
+    }
+
+
+    public static void addgetset(FieldDeclaration node){
+
+        AST ast = node.getAST();
+
+
+/*
+
+        String className = node.getName().getFullyQualifiedName();
+        MethodDeclaration newConstructor = ast.newMethodDeclaration();
+
+        newConstructor.setName(ast.newSimpleName(className));
+        newConstructor.setConstructor(true);
+        newConstructor.setBody(ast.newBlock());
+        ModifierKeyword amp = ModifierKeyword.PUBLIC_KEYWORD;
+        newConstructor.modifiers().add(ast.newModifier(amp));
+
+        node.bodyDeclarations().add(newConstructor);
+  */
+    }
+
+    public static void addGettersAndSetters(FieldDeclaration node) {
+        List<VariableDeclarationFragment> fragments = node.fragments();
+        for (VariableDeclarationFragment  fragment : fragments) {
+            //VariableDeclarationFragment fragment = fragments.get(0);
+            //IJavaElement fieldElement = fragment.resolveBinding().getJavaElement();
+            IVariableBinding binding = fragment.resolveBinding();
+            IField field = (IField) binding.getJavaElement();
+
+
+            if (field instanceof IField) {
+                try {
+                    if (GetterSetterUtil.getGetter((IField) field) == null) {
+                        String getter = GetterSetterUtil.getGetterName((IField) field, null);
+                        String stub = GetterSetterUtil.getGetterStub((IField) field, getter, false, 0);
+                        System.out.println(stub);
+                    }
+                } catch (CoreException e) {
+                    e.printStackTrace();
+                }
+                //if(GetterSetterUtil.getSetter((IField) fieldElement) != null){
+
+                //}
+            }
+        }
+    }
+
     public static String readFileToString(String filePath) throws IOException {
         StringBuilder fileData = new StringBuilder(1000);
         BufferedReader reader = new BufferedReader(new FileReader(filePath));
@@ -79,21 +264,24 @@ public class Transformations {
             }
         }
     }
+
+
+
 //add empty constructor
     public static void addEmptyConstructorAndMakeClassPublic(TypeDeclaration node){
-
-        int i = 0;
-        while (i < node.modifiers().size()) {
-            if (node.modifiers().get(i) instanceof Modifier) {
-                Modifier mod = (Modifier) node.modifiers().get(i);
-                if (mod.isPrivate() || mod.isProtected()) {
-                    mod.setKeyword(ModifierKeyword.PUBLIC_KEYWORD);
-                }
-            }
-            i++;
-        }
-
         if(!node.isInterface()){
+
+            int i = 0;
+            while (i < node.modifiers().size()) {
+                if (node.modifiers().get(i) instanceof Modifier) {
+                    Modifier mod = (Modifier) node.modifiers().get(i);
+                    if (mod.isPrivate() || mod.isProtected()) {
+                        mod.setKeyword(ModifierKeyword.PUBLIC_KEYWORD);
+                    }
+                }
+                i++;
+            }
+
             if(hasEmptyConstructor(node)){
                 return;
             }
@@ -213,10 +401,10 @@ public class Transformations {
     }
 
     public static void main(String[] args) throws IOException {
-        String path = args[0];
+        //String path = args[0];
         //System.out.println(path);
-        //File file = new File("/home/jprm/Documents/test/src/main/ExplodedArchive.java");
-        File file = new File(path);
+        File file = new File("/home/jprm/Documents/test/src/main/ExplodedArchive.java");
+        //File file = new File(path);
         Transformations.runTransformation(file);
     }
 }
