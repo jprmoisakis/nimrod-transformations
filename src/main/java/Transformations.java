@@ -29,6 +29,21 @@ public class Transformations {
         return false;
     }
 
+    public static boolean hasGettersAndSetters(TypeDeclaration node, String variableName){
+
+        String getMethodName = "get"+ variableName;
+        String setMethodName = "set"+ variableName;
+        for(MethodDeclaration method : node.getMethods()){
+            String methodName = method.getName().toString().toLowerCase();
+            if(methodName.contains(getMethodName.toLowerCase()) || methodName.contains(setMethodName.toLowerCase())){
+                return true;
+            }
+
+        }
+
+        return false;
+    }
+
     public static void transform(final CompilationUnit cu) {
 
         cu.accept(new ASTVisitor() {
@@ -46,7 +61,7 @@ public class Transformations {
             }
             public boolean visit(TypeDeclaration node){
                 addEmptyConstructorAndMakeClassPublic(node);
-                addgettersSetters(node);
+                addgettersAndSetters(node);
                 return true;
             }
 
@@ -79,7 +94,7 @@ public class Transformations {
 
         return block;
     }
-    public static void addgettersSetters(TypeDeclaration node){
+    public static void addgettersAndSetters(TypeDeclaration node){
 
         List<String> variableNames = new ArrayList<String>();
         List<Type> variableTypes = new ArrayList<Type>();
@@ -87,13 +102,16 @@ public class Transformations {
         if(!node.isInterface()){
             for(FieldDeclaration field: node.getFields()){
 
-                variableTypes.add(field.getType());
 
                 Object fragments = field.fragments().get(0);
                 if(fragments instanceof VariableDeclarationFragment){
+
                     String variableName = ((VariableDeclarationFragment) fragments).getName().toString();
-                    variableNames.add(variableName);
-                    System.out.println(variableName);
+                    if(!hasGettersAndSetters(node, variableName)) {
+                        variableTypes.add(field.getType());
+                        variableNames.add(variableName);
+                        //System.out.println(variableName);
+                    }
                 }
 
             }
@@ -105,12 +123,9 @@ public class Transformations {
             for(int i = 0 ; i< variableNames.size(); i++) {
                 Type type = variableTypes.get(i);
 
-
+                //add getter
                 ASTNode converted = ASTNode.copySubtree(astNode,type);
                 Type tipo = (Type) converted;
-
-
-
 
                 MethodDeclaration getter = astNode.newMethodDeclaration();
                 getter.setName(astNode.newSimpleName("get"+ variableNames.get(i)));
@@ -121,7 +136,7 @@ public class Transformations {
 
                 node.bodyDeclarations().add(getter);
 
-
+                //add setter
                 ASTNode converted2 = ASTNode.copySubtree(astNode,type);
                 Type tipo2 = (Type) converted2;
 
@@ -138,103 +153,12 @@ public class Transformations {
 
                 node.bodyDeclarations().add(setter);
 
-
-
-                //MethodDeclaration setter = astNode.newMethodDeclaration();
-                //setter.setName(astNode.newSimpleName("get"+ variableNames.get(i)));
-
-                //setter.setReturnType2(astNode.newPrimitiveType(PrimitiveType.VOID));
-                //setter.modifiers().add(astNode.newModifier(amp));
-                //setter.setReturnType2(tipo);
-
-                //SingleVariableDeclaration variableDeclaration = astNode.newSingleVariableDeclaration();
-                //Type b = variableTypes.get(i);
-                //Object c = variableTypes.get(i);
-
-
-                //variableDeclaration.setName(astNode.newSimpleName(variableNames.get(i)));
-                //boolean is = b.isParameterizedType();
-                //ast.newTypeLiteral().setType(b);
-                //astNode.newParameterizedType(b);
-                //variableDeclaration.setType(tipo);
-                //ast.newParameterizedType();
-                //b.getParent().
-                //setter.parameters().add(variableDeclaration);
-
-                //node.bodyDeclarations().add(setter);
             }
-            /*
-            ModifierKeyword amp = ModifierKeyword.PUBLIC_KEYWORD;
-            AST ast = node.getAST();
-            for(int i = 0 ; i< variableNames.size(); i++){
-                MethodDeclaration getter = ast.newMethodDeclaration();
-                getter.setName(ast.newSimpleName(variableNames.get(i)));
-
-                getter.setReturnType2(null);
-                //getter.setReturnType2(variableTypes.get(i));
-                getter.modifiers().add(ast.newModifier(amp));
-                node.bodyDeclarations().add(getter);
-
-            }
-            */
-
-
-
-
-
-
-
 
         }
 
     }
 
-
-    public static void addgetset(FieldDeclaration node){
-
-        AST ast = node.getAST();
-
-
-/*
-
-        String className = node.getName().getFullyQualifiedName();
-        MethodDeclaration newConstructor = ast.newMethodDeclaration();
-
-        newConstructor.setName(ast.newSimpleName(className));
-        newConstructor.setConstructor(true);
-        newConstructor.setBody(ast.newBlock());
-        ModifierKeyword amp = ModifierKeyword.PUBLIC_KEYWORD;
-        newConstructor.modifiers().add(ast.newModifier(amp));
-
-        node.bodyDeclarations().add(newConstructor);
-  */
-    }
-
-    public static void addGettersAndSetters(FieldDeclaration node) {
-        List<VariableDeclarationFragment> fragments = node.fragments();
-        for (VariableDeclarationFragment  fragment : fragments) {
-            //VariableDeclarationFragment fragment = fragments.get(0);
-            //IJavaElement fieldElement = fragment.resolveBinding().getJavaElement();
-            IVariableBinding binding = fragment.resolveBinding();
-            IField field = (IField) binding.getJavaElement();
-
-
-            if (field instanceof IField) {
-                try {
-                    if (GetterSetterUtil.getGetter((IField) field) == null) {
-                        String getter = GetterSetterUtil.getGetterName((IField) field, null);
-                        String stub = GetterSetterUtil.getGetterStub((IField) field, getter, false, 0);
-                        System.out.println(stub);
-                    }
-                } catch (CoreException e) {
-                    e.printStackTrace();
-                }
-                //if(GetterSetterUtil.getSetter((IField) fieldElement) != null){
-
-                //}
-            }
-        }
-    }
 
     public static String readFileToString(String filePath) throws IOException {
         StringBuilder fileData = new StringBuilder(1000);
