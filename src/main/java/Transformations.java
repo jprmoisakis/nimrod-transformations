@@ -94,6 +94,22 @@ public class Transformations {
 
         return block;
     }
+
+    private static boolean hasFinalModifier(FieldDeclaration fieldNode){
+
+        int i = 0;
+        while (i < fieldNode.modifiers().size()) {
+            if (fieldNode.modifiers().get(i) instanceof Modifier) {
+                Modifier mod = (Modifier) fieldNode.modifiers().get(i);
+                if (mod.isFinal()) {
+                    return true;
+                }
+            }
+            i++;
+        }
+        return false;
+    }
+
     public static void addgettersAndSetters(TypeDeclaration node){
 
         List<String> variableNames = new ArrayList<String>();
@@ -104,13 +120,13 @@ public class Transformations {
 
 
                 Object fragments = field.fragments().get(0);
-                if(fragments instanceof VariableDeclarationFragment){
+                if(fragments instanceof VariableDeclarationFragment && !hasFinalModifier(field)){
 
                     String variableName = ((VariableDeclarationFragment) fragments).getName().toString();
                     if(!hasGettersAndSetters(node, variableName)) {
                         variableTypes.add(field.getType());
                         variableNames.add(variableName);
-                        //System.out.println(variableName);
+                        System.out.println(variableName);
                     }
                 }
 
@@ -234,9 +250,9 @@ public class Transformations {
         while (i < node.modifiers().size()) {
             if (node.modifiers().get(i) instanceof Modifier) {
                 Modifier mod = (Modifier) node.modifiers().get(i);
-                if (mod.isFinal()) {
+                /*if (mod.isFinal()) {
                     modifiersToRemove.add(mod);
-                } else if (mod.isPrivate() || mod.isProtected()) {
+                } else */if (mod.isPrivate() || mod.isProtected()) {
                     mod.setKeyword(ModifierKeyword.PUBLIC_KEYWORD);
                 }
             }
@@ -272,9 +288,9 @@ public class Transformations {
         while (i < node.modifiers().size()) {
             if (node.modifiers().get(i) instanceof Modifier) {
                 Modifier mod = (Modifier) node.modifiers().get(i);
-                if (mod.isFinal()) {
+                /*if (mod.isFinal()) {
                     modifiersToRemove.add(mod);
-                } else if (mod.isPrivate() || mod.isProtected()) {
+                } else*/ if (mod.isPrivate() || mod.isProtected()) {
                     mod.setKeyword(ModifierKeyword.PUBLIC_KEYWORD);
                 }
             }
@@ -283,20 +299,27 @@ public class Transformations {
         for (Modifier mod : modifiersToRemove) {
             node.modifiers().remove(mod);
         }
+        if(node.modifiers().size() > 0 ){
+            if (!node.toString().contains("public ")) {
 
-        if (node.modifiers().size() > 0 && !node.toString().contains("public ")) {
-
-            Object firstMod = node.modifiers().get(0);
-            if (firstMod instanceof Annotation) {
-                if(!((Modifier) node.modifiers().get(1)).isPublic()){
-                    node.modifiers().add(1, node.getAST().newModifier(ModifierKeyword.PUBLIC_KEYWORD));
-                }
-
-            } else if (firstMod instanceof Modifier) {
-                if(!((Modifier) firstMod).isPublic()){
-                    node.modifiers().add(0, node.getAST().newModifier(ModifierKeyword.PUBLIC_KEYWORD));
+                Object firstMod = node.modifiers().get(0);
+                if (firstMod instanceof Annotation) {
+                    if(node.modifiers().size()>1) {
+                        if (!((Modifier) node.modifiers().get(1)).isPublic()) {
+                            node.modifiers().add(1, node.getAST().newModifier(ModifierKeyword.PUBLIC_KEYWORD));
+                        }
+                    }else{
+                        node.modifiers().add(1, node.getAST().newModifier(ModifierKeyword.PUBLIC_KEYWORD));
+                    }
+                } else if (firstMod instanceof Modifier) {
+                    if (!((Modifier) firstMod).isPublic()) {
+                        node.modifiers().add(0, node.getAST().newModifier(ModifierKeyword.PUBLIC_KEYWORD));
+                    }
                 }
             }
+        }else{
+            node.modifiers().add(0, node.getAST().newModifier(ModifierKeyword.PUBLIC_KEYWORD));
+            System.out.println(" modifiers " +node.getName().toString() + " size:" +node.modifiers().size());
         }
     }
 
