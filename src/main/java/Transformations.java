@@ -205,6 +205,37 @@ public class Transformations {
         }
     }
 
+    public static boolean hasFinalVariablesNotInitialized(TypeDeclaration node){
+        FieldDeclaration [] fields = node.getFields();
+        MethodDeclaration [] methods = node.getMethods();
+        List<String> finalFields = new ArrayList<String>();
+
+
+        for (FieldDeclaration field : fields) {
+            if(hasFinalModifier(field)){
+                if(field.fragments().size() == 1){
+                    Object fragments = field.fragments().get(0);
+                    if(fragments instanceof VariableDeclarationFragment){
+
+                        String variableName = ((VariableDeclarationFragment) fragments).getName().toString();
+                        finalFields.add(variableName);
+
+                    }
+                }
+            }
+        }
+        for(MethodDeclaration method : methods){
+            if(method.isConstructor()){
+                Block methodBody = method.getBody();
+                for(String field : finalFields){
+                    if(!methodBody.toString().contains("this." +field)){
+                        return true;
+                    }
+                }
+            }
+        }
+        return false;
+    }
 
 
 //add empty constructor
@@ -222,7 +253,7 @@ public class Transformations {
                 i++;
             }
 
-            if(hasEmptyConstructor(node)){
+            if(hasEmptyConstructor(node) || hasFinalVariablesNotInitialized(node)){
                 return;
             }
 
