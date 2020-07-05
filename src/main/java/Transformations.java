@@ -112,21 +112,29 @@ public class Transformations {
 
     public static void addgettersAndSetters(TypeDeclaration node){
 
-        List<String> variableNames = new ArrayList<String>();
-        List<Type> variableTypes = new ArrayList<Type>();
+        List<String> variableNamesGetter = new ArrayList<String>();
+        List<Type> variableTypesGetter = new ArrayList<Type>();
+
+        List<String> variableNamesSetter = new ArrayList<String>();
+        List<Type> variableTypesSetter = new ArrayList<Type>();
 
         if(!node.isInterface()){
             for(FieldDeclaration field: node.getFields()){
 
 
                 Object fragments = field.fragments().get(0);
-                if(fragments instanceof VariableDeclarationFragment && !hasFinalModifier(field)){
+                if(fragments instanceof VariableDeclarationFragment ){
 
                     String variableName = ((VariableDeclarationFragment) fragments).getName().toString();
                     if(!hasGettersAndSetters(node, variableName)) {
-                        variableTypes.add(field.getType());
-                        variableNames.add(variableName);
-                        System.out.println(variableName);
+                        variableTypesGetter.add(field.getType());
+                        variableNamesGetter.add(variableName);
+
+                        if(!hasFinalModifier(field)){
+                            variableTypesSetter.add(field.getType());
+                            variableNamesSetter.add(variableName);
+                        }
+
                     }
                 }
 
@@ -136,35 +144,39 @@ public class Transformations {
 
 
             //AST ast = node.getAST();
-            for(int i = 0 ; i< variableNames.size(); i++) {
-                Type type = variableTypes.get(i);
+            for(int i = 0 ; i< variableNamesGetter.size(); i++) {
+                Type type = variableTypesGetter.get(i);
 
                 //add getter
-                ASTNode converted = ASTNode.copySubtree(astNode,type);
+                ASTNode converted = ASTNode.copySubtree(astNode, type);
                 Type tipo = (Type) converted;
 
                 MethodDeclaration getter = astNode.newMethodDeclaration();
-                getter.setName(astNode.newSimpleName("get"+ variableNames.get(i)));
+                getter.setName(astNode.newSimpleName("get" + variableNamesGetter.get(i)));
                 getter.modifiers().add(astNode.newModifier(publicMod));
                 getter.setReturnType2(tipo);
-                Block getterBody = createGetterMethodBody(astNode, variableNames.get(i));
+                Block getterBody = createGetterMethodBody(astNode, variableNamesGetter.get(i));
                 getter.setBody(getterBody);
 
                 node.bodyDeclarations().add(getter);
+            }
+
+            for(int i = 0 ; i< variableNamesSetter.size(); i++) {
+                Type type = variableTypesSetter.get(i);
 
                 //add setter
                 ASTNode converted2 = ASTNode.copySubtree(astNode,type);
                 Type tipo2 = (Type) converted2;
 
                 MethodDeclaration setter = astNode.newMethodDeclaration();
-                setter.setName(astNode.newSimpleName("set"+ variableNames.get(i)));
+                setter.setName(astNode.newSimpleName("set"+ variableNamesSetter.get(i)));
                 setter.modifiers().add(astNode.newModifier(publicMod));
                 setter.setReturnType2(astNode.newPrimitiveType(PrimitiveType.VOID));
                 SingleVariableDeclaration parameter = astNode.newSingleVariableDeclaration();
                 parameter.setType(tipo2);
-                parameter.setName(astNode.newSimpleName(variableNames.get(i)));
+                parameter.setName(astNode.newSimpleName(variableNamesSetter.get(i)));
                 setter.parameters().add(parameter);
-                Block setterBody = createSetterMethodBody(astNode, variableNames.get(i));
+                Block setterBody = createSetterMethodBody(astNode, variableNamesSetter.get(i));
                 setter.setBody(setterBody);
 
                 node.bodyDeclarations().add(setter);
@@ -207,31 +219,26 @@ public class Transformations {
 
     public static boolean hasFinalVariablesNotInitialized(TypeDeclaration node){
         FieldDeclaration [] fields = node.getFields();
-        MethodDeclaration [] methods = node.getMethods();
-        List<String> finalFields = new ArrayList<String>();
 
 
         for (FieldDeclaration field : fields) {
             if(hasFinalModifier(field)){
-                if(field.fragments().size() == 1){
-                    Object fragments = field.fragments().get(0);
-                    if(fragments instanceof VariableDeclarationFragment){
 
-                        String variableName = ((VariableDeclarationFragment) fragments).getName().toString();
-                        finalFields.add(variableName);
+                for (Object fragment: field.fragments()){
+                    if(fragment instanceof VariableDeclarationFragment){
+                        if(((VariableDeclarationFragment) fragment).getInitializer() == null){
+                            return true;
+                        }
+                    }
 
-                    }
                 }
-            }
-        }
-        for(MethodDeclaration method : methods){
-            if(method.isConstructor()){
-                Block methodBody = method.getBody();
-                for(String field : finalFields){
-                    if(!methodBody.toString().contains("this." +field)){
-                        return true;
-                    }
+                /*
+                if(field.fragments().size()== 1){
+                    System.out.println(field.fragments().toString());
+
+                    return true;
                 }
+                */
             }
         }
         return false;
@@ -379,14 +386,14 @@ public class Transformations {
     }
 
     public static void main(String[] args) throws IOException {
-        //String path = args[0];
+        String path = args[0];
         //System.out.println(path);
-        File file = new File("/home/jprm/Documents/test/src/main/ExplodedArchive.java");
-        //File file = new File(path);
+        //File file = new File("/home/jprm/Documents/test/src/main/ExplodedArchive.java");
+        File file = new File(path);
         Transformations.runTransformation(file);
     }
 }
-
+//mvn clean compile assembly:single
 //mvn exec:java -Dexec.mainClass="com.vineetmanohar.module.Main"
 //mvn exec:java -Dexec.mainClass="com.vineetmanohar.module.Main" -Dexec.args="arg0 arg1 arg2"
 //mvn exec:java -Dexec.mainClass="com.vineetmanohar.module.Main" -Dexec.classpathScope=runtime
