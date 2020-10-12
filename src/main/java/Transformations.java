@@ -8,14 +8,12 @@ import org.eclipse.jdt.core.IJavaElement;
 import org.eclipse.jdt.core.JavaCore;
 import org.eclipse.jdt.core.JavaModelException;
 import org.eclipse.jdt.core.dom.*;
-import org.eclipse.jdt.internal.corext.codemanipulation.*;
-import org.eclipse.jdt.internal.corext.util.JdtFlags;
+
 
 import static org.eclipse.jdt.core.dom.Modifier.*;
 
 
 public class Transformations {
-
 
     //todo if it doesnt have any constructor?
     public static boolean hasEmptyConstructor(TypeDeclaration node){
@@ -187,7 +185,6 @@ public class Transformations {
 
     }
 
-
     public static String readFileToString(String filePath) throws IOException {
         StringBuilder fileData = new StringBuilder(1000);
         BufferedReader reader = new BufferedReader(new FileReader(filePath));
@@ -258,6 +255,20 @@ public class Transformations {
                     }
                 }
                 i++;
+            }
+            if (node.modifiers().size() > 0 && !node.toString().contains("public ")) {
+
+                Object firstMod = node.modifiers().get(0);
+                if (firstMod instanceof Annotation) {
+                    if(!((Modifier) node.modifiers().get(1)).isPublic()){
+                        node.modifiers().add(1, node.getAST().newModifier(ModifierKeyword.PUBLIC_KEYWORD));
+                    }
+
+                } else if (firstMod instanceof Modifier) {
+                    if(!((Modifier) firstMod).isPublic()){
+                        node.modifiers().add(0, node.getAST().newModifier(ModifierKeyword.PUBLIC_KEYWORD));
+                    }
+                }
             }
 
             if(hasEmptyConstructor(node) || hasFinalVariablesNotInitialized(node)){
@@ -389,9 +400,21 @@ public class Transformations {
         String path = args[0];
         //System.out.println(path);
         //File file = new File("/home/jprm/Documents/test/src/main/ExplodedArchive.java");
+        //File file = new File("E:\\git\\nimrod-transformations\\Ball.java");
         File file = new File(path);
         Transformations.runTransformation(file);
     }
+/*
+    public static void main(String[] args) throws IOException {
+        //String path = args[0];
+        //System.out.println(path);
+        //File file = new File("/home/jprm/Documents/test/src/main/ExplodedArchive.java");
+        File file = new File("E:\\git\\nimrod-transformations\\Ball.java");
+        //File file = new File(path);
+        Transformations.runTransformation(file);
+    }*/
+
+
 }
 //mvn clean compile assembly:single
 //mvn exec:java -Dexec.mainClass="com.vineetmanohar.module.Main"
