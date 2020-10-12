@@ -395,16 +395,16 @@ public class Transformations {
         fooWriter.close();
 
     }
-
-    public static void main(String[] args) throws IOException {
-        String path = args[0];
-        //System.out.println(path);
-        //File file = new File("/home/jprm/Documents/test/src/main/ExplodedArchive.java");
-        //File file = new File("E:\\git\\nimrod-transformations\\Ball.java");
-        File file = new File(path);
-        Transformations.runTransformation(file);
-    }
-/*
+    /*
+        public static void main(String[] args) throws IOException {
+            String path = args[0];
+            //System.out.println(path);
+            //File file = new File("/home/jprm/Documents/test/src/main/ExplodedArchive.java");
+            //File file = new File("E:\\git\\nimrod-transformations\\Ball.java");
+            File file = new File(path);
+            Transformations.runTransformation(file);
+        }
+    */
     public static void main(String[] args) throws IOException {
         //String path = args[0];
         //System.out.println(path);
@@ -412,7 +412,7 @@ public class Transformations {
         File file = new File("E:\\git\\nimrod-transformations\\Ball.java");
         //File file = new File(path);
         Transformations.runTransformation(file);
-    }*/
+    }
 
 
 }
